@@ -62,8 +62,6 @@ func main() {
 
 	fmt.Printf("Using device: %s (%s)\n", iface, ifaceDesc)
 
-	iface = "\\Device\\NPF_{38514249-51D8-46B6-961C-088A6E47AD0E}"
-
 	handle, err := pcap.OpenLive(iface, 1600, true, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
