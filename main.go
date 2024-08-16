@@ -21,7 +21,7 @@ type Config struct {
 }
 
 var scans = make(map[string][]PortScan)
-var lastAlertTime = make(map[string]time.Time) // Track the last alert time for each IP
+var lastAlertTime = make(map[string]time.Time)
 
 func readConfig() (*ini.File, error) {
 
@@ -35,7 +35,6 @@ func readConfig() (*ini.File, error) {
 }
 
 func main() {
-	// Find all network interfaces
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +46,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Choose the first device that matches your criteria
 	var iface string
 	var ifaceDesc string
 	for _, device := range devices {
@@ -65,20 +63,18 @@ func main() {
 	fmt.Printf("Using device: %s (%s)\n", iface, ifaceDesc)
 
 	iface = "\\Device\\NPF_{38514249-51D8-46B6-961C-088A6E47AD0E}"
-	// Open the device for capturing
+
 	handle, err := pcap.OpenLive(iface, 1600, true, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer handle.Close()
 
-	// Set the BPF filter for capturing only TCP packets with SYN flag
 	err = handle.SetBPFFilter("tcp[tcpflags] & tcp-syn != 0")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Use a packet source to process packets
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	fmt.Println("Listening for TCP SYN packets...")
@@ -95,19 +91,16 @@ func main() {
 }
 
 func detectPortScan(ip string, port uint16) {
-	// Current time
 	now := time.Now()
 
 	if lastAlert, alerted := lastAlertTime[ip]; alerted && now.Sub(lastAlert) < 30*time.Second {
 		return
 	}
 
-	// If the IP doesn't exist in the map, initialize its slice
 	if _, exists := scans[ip]; !exists {
 		scans[ip] = []PortScan{}
 	}
 
-	// Filter out old scans (older than 5 seconds)
 	var newScans []PortScan
 	for _, scan := range scans[ip] {
 		if now.Sub(scan.Timestamp) <= 5*time.Second {
@@ -116,11 +109,9 @@ func detectPortScan(ip string, port uint16) {
 	}
 	scans[ip] = newScans
 
-	// Add the new port scan
 	scans[ip] = append(scans[ip], PortScan{Port: port, Timestamp: now})
 
-	// Check if more than 10 ports have been scanned within 5 seconds
-	if len(scans[ip]) > 10 {
+	if len(scans[ip]) > 30 {
 		fmt.Printf("Potential port scan detected from IP: %s\n", ip)
 		lastAlertTime[ip] = now
 	}
