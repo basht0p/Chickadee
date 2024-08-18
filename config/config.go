@@ -7,42 +7,79 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-func ReadConfig() models.Config {
+func handleConfigErr(section string, err error) {
+	if err != nil {
+		fmt.Printf("Error reading %v: %v", section, err)
+	}
+}
 
-	var configModel models.Config
+func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
+
+	var detectionOptions models.DetectionOptions
+	var alertOptions models.AlertOptions
 
 	iniContent, err := ini.Load("config.ini")
-	if err != nil {
-		fmt.Println("Error reading config:", err)
-		return configModel
-	}
+	iniOptions := iniContent.Section("")
+	handleConfigErr("config file", err)
 
-	iniIface := iniContent.Section("").Key("interface").String()
+	iniIface := iniOptions.Key("interface").String()
+	handleConfigErr("interface", err)
 
-	iniThresholdCount, err := iniContent.Section("").Key("threshold_count").Uint()
-	if err != nil {
-		fmt.Println("Error reading config:", err)
-		return configModel
-	}
+	iniThresholdCount, err := iniOptions.Key("threshold_count").Uint()
+	handleConfigErr("threshold_count", err)
 
-	iniThresholdTime, err := iniContent.Section("").Key("threshold_time").Uint()
-	if err != nil {
-		fmt.Println("Error reading config:", err)
-		return configModel
-	}
+	iniThresholdTime, err := iniOptions.Key("threshold_time").Uint()
+	handleConfigErr("threshold_time", err)
 
-	iniIgnoreTime, err := iniContent.Section("").Key("ignore_time").Uint()
-	if err != nil {
-		fmt.Println("Error reading config:", err)
-		return configModel
-	}
+	iniIgnoreTime, err := iniOptions.Key("ignore_time").Uint()
+	handleConfigErr("ignore_time", err)
 
-	configModel = models.Config{
+	iniSmtpEnabled, err := iniOptions.Key("enable_smtp").Bool()
+	handleConfigErr("config file", err)
+
+	iniSmtpHost := iniOptions.Key("smtp_host").String()
+	iniSmtpPort := iniOptions.Key("smtp_port").String()
+
+	iniSmtpAuthEnabled, err := iniOptions.Key("enable_auth").Bool()
+	handleConfigErr("config file", err)
+
+	iniSmtpAuthUser := iniOptions.Key("auth_user").String()
+	iniSmtpAuthPass := iniOptions.Key("auth_pass").String()
+
+	iniSmtpTlsEnabled, err := iniOptions.Key("enable_tls").Bool()
+	handleConfigErr("config file", err)
+
+	iniSmtpTlsType, err := iniOptions.Key("tls_type").Uint()
+	handleConfigErr("config file", err)
+
+	iniSmtpTlsVerifyCa, err := iniOptions.Key("verify_ca").Bool()
+	handleConfigErr("config file", err)
+
+	iniSmtpToField := iniOptions.Key("to").String()
+	iniSmtpFromField := iniOptions.Key("from").String()
+	iniSmtpSubjectField := iniOptions.Key("subject").String()
+
+	detectionOptions = models.DetectionOptions{
 		Iface:          iniIface,
 		ThresholdCount: iniThresholdCount,
 		ThresholdTime:  iniThresholdTime,
 		IgnoreTime:     iniIgnoreTime,
 	}
 
-	return configModel
+	alertOptions = models.AlertOptions{
+		SmtpEnabled:      iniSmtpEnabled,
+		SmtpHost:         iniSmtpHost,
+		SmtpPort:         iniSmtpPort,
+		SmtpAuthEnabled:  iniSmtpAuthEnabled,
+		SmtpAuthUser:     iniSmtpAuthUser,
+		SmtpAuthPass:     iniSmtpAuthPass,
+		SmtpTlsEnabled:   iniSmtpTlsEnabled,
+		SmtpTlsType:      models.TLSType(iniSmtpTlsType),
+		SmtpTlsVerifyCa:  iniSmtpTlsVerifyCa,
+		SmtpToField:      iniSmtpToField,
+		SmtpFromField:    iniSmtpFromField,
+		SmtpSubjectField: iniSmtpSubjectField,
+	}
+
+	return detectionOptions, alertOptions
 }
