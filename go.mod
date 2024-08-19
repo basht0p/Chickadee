@@ -10,6 +10,7 @@ require (
 )
 
 require (
+	github.com/kardianos/service v1.2.2 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
-	golang.org/x/sys v0.0.0-20190412213103-97732733099d // indirect
+	golang.org/x/sys v0.24.0 // indirect
 )

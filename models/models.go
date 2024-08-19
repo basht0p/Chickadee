@@ -22,6 +22,7 @@ type DetectionOptions struct {
 	ThresholdCount uint
 	ThresholdTime  uint
 	IgnoreTime     uint
+	AgentName      string
 }
 
 type AlertOptions struct {

@@ -34,6 +34,8 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 	iniIgnoreTime, err := iniOptions.Key("ignore_time").Uint()
 	handleConfigErr("ignore_time", err)
 
+	iniAgentName := iniOptions.Key("agent_name").String()
+
 	iniSmtpEnabled, err := iniOptions.Key("enable_smtp").Bool()
 	handleConfigErr("config file", err)
 
@@ -64,6 +66,7 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 		ThresholdCount: iniThresholdCount,
 		ThresholdTime:  iniThresholdTime,
 		IgnoreTime:     iniIgnoreTime,
+		AgentName:      iniAgentName,
 	}
 
 	alertOptions = models.AlertOptions{
@@ -78,7 +81,7 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 		SmtpTlsVerifyCa:  iniSmtpTlsVerifyCa,
 		SmtpToField:      iniSmtpToField,
 		SmtpFromField:    iniSmtpFromField,
-		SmtpSubjectField: iniSmtpSubjectField,
+		SmtpSubjectField: (iniAgentName + ": " + iniSmtpSubjectField),
 	}
 
 	return detectionOptions, alertOptions

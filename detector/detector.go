@@ -31,16 +31,18 @@ func FindIface(ifaceQuery string) (iface string, ifaceDesc string) {
 				ifaceDesc = device.Description
 				break
 			} else {
+				logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was found, but no usable addresses were configured. Exiting...", ifaceQuery))
 				log.Fatal(fmt.Errorf("device (%v) was found, but no usable addresses were configured. exiting", ifaceDesc))
 			}
 		}
 	}
 
 	if iface == "" {
+		logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was not found. Exiting...", ifaceQuery))
 		log.Fatal(fmt.Errorf("device (%v) was not found. exiting", ifaceQuery))
 	}
 
-	logger.Log(false, 0, ("Interface found! Using: " + ifaceDesc + " (" + iface + ")"))
+	logger.Log(true, 0, 510, ("Interface found! Using: " + ifaceDesc + " (" + iface + ")"))
 
 	return
 }
@@ -57,7 +59,7 @@ func OpenPcap(iface string, ifaceDesc string, detectionOptions models.DetectionO
 		log.Fatal(err)
 	}
 
-	logger.Log(false, 0, ("Packet capture initialized. Listening for scans..."))
+	logger.Log(true, 0, 511, ("Packet capture initialized. Listening for scans..."))
 	return handle
 }
 
@@ -104,7 +106,7 @@ func DetectPortScan(ip string, port uint16, tCount uint16, tTime uint16, iTime u
 	scans[ip] = append(scans[ip], models.PortScan{Port: port, Timestamp: now})
 
 	if len(scans[ip]) > int(tCount) {
-		logger.Log(false, 1, ("Port scan detected from: " + ip))
+		logger.Log(true, 1, 515, ("Port scan detected from: " + ip))
 		alerts.TriggerAlert(alertOptions, ("Port scan detected from: " + ip), ip)
 		lastAlertTime[ip] = now
 	}

@@ -42,20 +42,20 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 				return fmt.Errorf("error during connection: %v", err)
 			}
 		default:
-			logger.Log(false, 2, ("Invalid TLS type: " + string(alertOptions.SmtpTlsType)))
+			logger.Log(true, 2, 500, ("Invalid TLS type: " + string(alertOptions.SmtpTlsType)))
 			return err
 		}
 
 		authPlain := sasl.NewPlainClient("", alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
 		if err = conn.Auth(authPlain); err != nil {
 
-			logger.Log(false, 2, ("Error encountered using AUTH PLAIN:" + err.Error()))
-			logger.Log(false, 0, "Attempting to switch to AUTH LOGIN...")
+			logger.Log(true, 1, 503, ("Error encountered using AUTH PLAIN:" + err.Error()))
+			logger.Log(true, 1, 503, "Attempting to switch to AUTH LOGIN...")
 
 			authLogin := sasl.NewLoginClient(alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
 
 			if err = conn.Auth(authLogin); err != nil {
-				logger.Log(false, 2, ("Error encountered using AUTH LOGIN: " + err.Error()))
+				logger.Log(true, 2, 500, ("Error encountered using AUTH LOGIN: " + err.Error()))
 				return err
 			}
 		}
@@ -109,12 +109,12 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 
 	if err = conn.Quit(); err != nil {
 		if smtpErr, ok := err.(*smtp.SMTPError); ok && smtpErr.Code == 250 {
-			logger.Log(false, 0, ("Alert sent to SMTP recipient(s) successfully with response 250."))
+			logger.Log(true, 0, 510, ("Alert sent to SMTP recipient(s) successfully with response 250."))
 		} else {
 			return fmt.Errorf("error closing connection: %v", err)
 		}
 	} else {
-		logger.Log(false, 0, ("Alert sent to SMTP recipient(s) successfully."))
+		logger.Log(true, 0, 510, ("Alert sent to SMTP recipient(s) successfully."))
 	}
 
 	return nil
