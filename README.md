@@ -1,4 +1,8 @@
+
 # Chickadee
+
+![alt text](chickadee_mini_lazer-1.png)
+
 
 Chickadee is a tiny network scan detector written in Go, designed to run as a service, or interactively, on Windows systems.
 
