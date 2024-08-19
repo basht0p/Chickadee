@@ -1,8 +1,8 @@
 # Chickadee
 
-Chickadee is a tiny network scan detector written in Go, designed to run as a service on Windows systems.
+Chickadee is a tiny network scan detector written in Go, designed to run as a service, or interactively, on Windows systems.
 
-It features the ability to send alerts via SMTP. Additionally, it also logs to the Windows Application Event Log, so if you're using a collector on that endpoint, you can monitor the below event IDs and create alerts based on them.
+It features the ability to send alerts via SMTP. Additionally, it also logs to the Windows Application Event Log, so if you're using a collector for a SIEM on that endpoint, you can monitor the below event IDs and create alerts based on them.
 
 <table>
     <thead>
