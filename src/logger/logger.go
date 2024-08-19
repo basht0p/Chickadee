@@ -56,7 +56,7 @@ func Log(winEvent bool, severity uint, eventID uint32, message string) {
 				elog.Error(eventID, message)
 			}
 		} else {
-			fmt.Println("Event log is not initialized. Fallback to console: " + fullMessage)
+			fmt.Println(fullMessage)
 		}
 	} else {
 		fmt.Println(fullMessage)

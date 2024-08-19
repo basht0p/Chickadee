@@ -11,6 +11,7 @@ import (
 	"github.com/basht0p/chickadee/logger"
 	"github.com/google/gopacket"
 	"github.com/kardianos/service"
+	"golang.org/x/sys/windows"
 )
 
 type program struct{}
@@ -68,6 +69,14 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+func isInteractive() bool {
+	stdinHandle := windows.Handle(os.Stdin.Fd())
+
+	var mode uint32
+	err := windows.GetConsoleMode(stdinHandle, &mode)
+	return err == nil
+}
+
 func main() {
 	svcConfig := &service.Config{
 		Name:        "Chickadee",
@@ -78,6 +87,7 @@ func main() {
 	prg := &program{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
+		logger.Log(true, 2, 500, fmt.Sprintf("Fatal: %v", err))
 		log.Fatal(err)
 	}
 
@@ -86,16 +96,24 @@ func main() {
 		if action == "install" || action == "uninstall" || action == "start" || action == "stop" || action == "restart" {
 			err = service.Control(s, action)
 			if err != nil {
+				logger.Log(true, 2, 500, fmt.Sprintf("Failed to execute action %q: %v", action, err))
 				log.Fatalf("Failed to execute action %q: %v", action, err)
 			}
 		} else {
+			logger.Log(true, 2, 500, fmt.Sprintf("Invalid action: %q. Valid actions are: %q", action, service.ControlAction))
 			log.Fatalf("Invalid action: %q. Valid actions are: %q", action, service.ControlAction)
 		}
 		return
 	}
 
-	err = s.Run()
-	if err != nil {
-		log.Fatal(err)
+	if isInteractive() {
+		fmt.Println("Running interactively...")
+		prg.run()
+	} else {
+		err = s.Run()
+		if err != nil {
+			logger.Log(true, 2, 500, fmt.Sprintf("Fatal: %v", err))
+			log.Fatal(err)
+		}
 	}
 }

@@ -3,12 +3,14 @@ package config
 import (
 	"fmt"
 
+	"github.com/basht0p/chickadee/logger"
 	"github.com/basht0p/chickadee/models"
 	"gopkg.in/ini.v1"
 )
 
 func handleConfigErr(section string, err error) {
 	if err != nil {
+		logger.Log(true, 1, 503, fmt.Sprintf("Error reading config section %v: %v", section, err))
 		fmt.Printf("Error reading %v: %v", section, err)
 	}
 }
@@ -37,25 +39,25 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 	iniAgentName := iniOptions.Key("agent_name").String()
 
 	iniSmtpEnabled, err := iniOptions.Key("enable_smtp").Bool()
-	handleConfigErr("config file", err)
+	handleConfigErr("enable_smtp", err)
 
 	iniSmtpHost := iniOptions.Key("smtp_host").String()
 	iniSmtpPort := iniOptions.Key("smtp_port").String()
 
 	iniSmtpAuthEnabled, err := iniOptions.Key("enable_auth").Bool()
-	handleConfigErr("config file", err)
+	handleConfigErr("enable_auth", err)
 
 	iniSmtpAuthUser := iniOptions.Key("auth_user").String()
 	iniSmtpAuthPass := iniOptions.Key("auth_pass").String()
 
 	iniSmtpTlsEnabled, err := iniOptions.Key("enable_tls").Bool()
-	handleConfigErr("config file", err)
+	handleConfigErr("enable_tls", err)
 
 	iniSmtpTlsType, err := iniOptions.Key("tls_type").Uint()
-	handleConfigErr("config file", err)
+	handleConfigErr("tls_type", err)
 
 	iniSmtpTlsVerifyCa, err := iniOptions.Key("verify_ca").Bool()
-	handleConfigErr("config file", err)
+	handleConfigErr("verify_ca", err)
 
 	iniSmtpToField := iniOptions.Key("to").String()
 	iniSmtpFromField := iniOptions.Key("from").String()

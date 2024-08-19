@@ -1,8 +1,10 @@
+Name "Chickadee NSD Installer"
+
 Outfile "install_chickadee.exe"
  
 InstallDir $PROGRAMFILES64\Chickadee
  
-Section
+Section "Check Elevation"
  
     UserInfo::GetAccountType
     Pop $0
@@ -23,11 +25,13 @@ Section "Install"
  
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Chickadee" \
             "DisplayName" "Chickadee Network Scan Detector"
+
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Chickadee" \
             "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
 
     Exec "$INSTDIR\chickadee.exe install"
-    Exec "$INSTDIR\chickadee.exe start"
+
+    MessageBox MB_OK "Make sure to navigate to $INSTDIR\config.ini and set the appropriate interface before starting the service."
 
 SectionEnd
  
@@ -35,14 +39,8 @@ Section "Uninstall"
 
     Exec "$INSTDIR\chickadee.exe stop"
     Exec "$INSTDIR\chickadee.exe uninstall"
-
+    Sleep 5000
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Chickadee"
-
-    Delete $INSTDIR\chickadee.exe
-    Delete $INSTDIR\config.ini
-    Delete $INSTDIR\uninstall.exe
-    
-
-    RMDir $INSTDIR
+    RMDir /r $INSTDIR
 
 SectionEnd

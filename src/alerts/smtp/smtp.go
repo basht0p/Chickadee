@@ -13,6 +13,7 @@ import (
 // SendSmtpAlert sends an email using the go-smtp library
 func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp string) error {
 	if !alertOptions.SmtpEnabled {
+		logger.Log(true, 1, 503, "SMTP is not enabled, but the function was called. How'd you do that?")
 		return fmt.Errorf("SMTP is not enabled in the config")
 	}
 
@@ -34,28 +35,30 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 		case 1:
 			conn, err = smtp.DialTLS(smtpServer, tlsConfig)
 			if err != nil {
+				logger.Log(true, 1, 503, fmt.Sprintf("Error during SSL/TLS connection: %v", err))
 				return fmt.Errorf("error during connection: %v", err)
 			}
 		case 2:
 			conn, err = smtp.DialStartTLS(smtpServer, tlsConfig)
 			if err != nil {
+				logger.Log(true, 1, 503, fmt.Sprintf("Error during STARTTLS connection: %v", err))
 				return fmt.Errorf("error during connection: %v", err)
 			}
 		default:
-			logger.Log(true, 2, 500, ("Invalid TLS type: " + string(alertOptions.SmtpTlsType)))
+			logger.Log(true, 2, 500, fmt.Sprintf("Invalid TLS type: %v", string(alertOptions.SmtpTlsType)))
 			return err
 		}
 
 		authPlain := sasl.NewPlainClient("", alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
 		if err = conn.Auth(authPlain); err != nil {
 
-			logger.Log(true, 1, 503, ("Error encountered using AUTH PLAIN:" + err.Error()))
+			logger.Log(true, 1, 503, fmt.Sprintf("Error encountered using AUTH PLAIN: %v", err))
 			logger.Log(true, 1, 503, "Attempting to switch to AUTH LOGIN...")
 
 			authLogin := sasl.NewLoginClient(alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
 
 			if err = conn.Auth(authLogin); err != nil {
-				logger.Log(true, 2, 500, ("Error encountered using AUTH LOGIN: " + err.Error()))
+				logger.Log(true, 2, 500, fmt.Sprintf("Error encountered using AUTH LOGIN: %v", err))
 				return err
 			}
 		}
@@ -63,6 +66,7 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 	} else {
 		conn, err = smtp.Dial(smtpServer)
 		if err != nil {
+			logger.Log(true, 2, 500, fmt.Sprintf("Error encountered dialing connection: %v", err))
 			return fmt.Errorf("error during connection: %v", err)
 		}
 	}
@@ -73,14 +77,17 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 	rcptOpts := smtp.RcptOptions{}
 
 	if err = conn.Mail(alertOptions.SmtpFromField, &mailOpts); err != nil {
+		logger.Log(true, 2, 503, fmt.Sprintf("Error setting sender: %v", err))
 		return fmt.Errorf("error setting sender: %v", err)
 	}
 	if err = conn.Rcpt(alertOptions.SmtpToField, &rcptOpts); err != nil {
+		logger.Log(true, 2, 503, fmt.Sprintf("Error setting recipient: %v", err))
 		return fmt.Errorf("error setting recipient: %v", err)
 	}
 
 	wc, err := conn.Data()
 	if err != nil {
+		logger.Log(true, 2, 503, fmt.Sprintf("Error getting write closer: %v", err))
 		return fmt.Errorf("error getting write closer: %v", err)
 	}
 	defer wc.Close()
@@ -102,6 +109,7 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 	body += fmt.Sprintf("A potentially malicious network scan was detected coming from this IP address: %v\n", srcIp)
 
 	if _, err = wc.Write([]byte(body)); err != nil {
+		logger.Log(true, 2, 503, fmt.Sprintf("Error writing email body: %v", err))
 		return fmt.Errorf("error writing email body: %v", err)
 	}
 
@@ -111,6 +119,7 @@ func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp 
 		if smtpErr, ok := err.(*smtp.SMTPError); ok && smtpErr.Code == 250 {
 			logger.Log(true, 0, 510, ("Alert sent to SMTP recipient(s) successfully with response 250."))
 		} else {
+			logger.Log(true, 2, 503, fmt.Sprintf("Error closing connection: %v", err))
 			return fmt.Errorf("error closing connection: %v", err)
 		}
 	} else {

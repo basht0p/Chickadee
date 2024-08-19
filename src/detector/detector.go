@@ -21,6 +21,7 @@ func FindIface(ifaceQuery string) (iface string, ifaceDesc string) {
 
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
+		logger.Log(true, 2, 500, fmt.Sprintf("Fatal error using pcap.FindAllDevs(): %v", err))
 		log.Fatal(err)
 	}
 
@@ -38,8 +39,14 @@ func FindIface(ifaceQuery string) (iface string, ifaceDesc string) {
 	}
 
 	if iface == "" {
-		logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was not found. Exiting...", ifaceQuery))
-		log.Fatal(fmt.Errorf("device (%v) was not found. exiting", ifaceQuery))
+		logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was not found. Using first interface found with valid address...", ifaceQuery))
+		for _, device := range devices {
+			if len(device.Addresses) > 0 {
+				iface = device.Name
+				ifaceDesc = device.Description
+				break
+			}
+		}
 	}
 
 	logger.Log(true, 0, 510, ("Interface found! Using: " + ifaceDesc + " (" + iface + ")"))
@@ -51,11 +58,13 @@ func OpenPcap(iface string, ifaceDesc string, detectionOptions models.DetectionO
 
 	handle, err := pcap.OpenLive(iface, 1600, true, pcap.BlockForever)
 	if err != nil {
+		logger.Log(true, 2, 500, fmt.Sprintf("Fatal error opening pcap on interface %v: %v", iface, err))
 		log.Fatal(err)
 	}
 
 	err = handle.SetBPFFilter("tcp[tcpflags] & tcp-syn != 0")
 	if err != nil {
+		logger.Log(true, 2, 500, fmt.Sprintf("Fatal error setting BPF Filter: %v", err))
 		log.Fatal(err)
 	}
 
