@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/basht0p/chickadee/alerts"
 	"github.com/basht0p/chickadee/logger"
 	"github.com/basht0p/chickadee/models"
 
@@ -103,8 +104,8 @@ func DetectPortScan(ip string, port uint16, tCount uint16, tTime uint16, iTime u
 	scans[ip] = append(scans[ip], models.PortScan{Port: port, Timestamp: now})
 
 	if len(scans[ip]) > int(tCount) {
-		logger.Log(true, 2, ("Port scan detected from: " + ip))
-		//alerts.TriggerAlert(alertOptions)
+		logger.Log(false, 1, ("Port scan detected from: " + ip))
+		alerts.TriggerAlert(alertOptions, ("Port scan detected from: " + ip), ip)
 		lastAlertTime[ip] = now
 	}
 }

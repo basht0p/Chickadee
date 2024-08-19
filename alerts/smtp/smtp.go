@@ -4,13 +4,14 @@ import (
 	"crypto/tls"
 	"fmt"
 
+	"github.com/basht0p/chickadee/logger"
 	"github.com/basht0p/chickadee/models"
 	"github.com/emersion/go-sasl"
 	smtp "github.com/emersion/go-smtp"
 )
 
 // SendSmtpAlert sends an email using the go-smtp library
-func SendSmtpAlert(alertOptions models.AlertOptions) error {
+func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp string) error {
 	if !alertOptions.SmtpEnabled {
 		return fmt.Errorf("SMTP is not enabled in the config")
 	}
@@ -26,33 +27,47 @@ func SendSmtpAlert(alertOptions models.AlertOptions) error {
 	var conn *smtp.Client
 	var err error
 
+	// Initiate connection w/ or w/o TLS / STARTTLS & handle auth
+
 	if alertOptions.SmtpTlsEnabled {
 		switch alertOptions.SmtpTlsType {
-		case 2: // STARTTLS (recommended for Microsoft 365)
+		case 1:
+			conn, err = smtp.DialTLS(smtpServer, tlsConfig)
+			if err != nil {
+				return fmt.Errorf("error during connection: %v", err)
+			}
+		case 2:
 			conn, err = smtp.DialStartTLS(smtpServer, tlsConfig)
 			if err != nil {
 				return fmt.Errorf("error during connection: %v", err)
 			}
-
-			// Authentication - ensure you're using the full email as the username
-			authPlain := sasl.NewPlainClient("", alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
-			if err = conn.Auth(authPlain); err != nil {
-				fmt.Printf("error with auth_plain: %v\ntrying auth_login...\n", err)
-				authLogin := sasl.NewLoginClient(alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
-				if err = conn.Auth(authLogin); err != nil {
-					return fmt.Errorf("error with auth_login: %v", err)
-				}
-			}
 		default:
-			return fmt.Errorf("invalid TLS type: %v", alertOptions.SmtpTlsType)
+			logger.Log(false, 2, ("Invalid TLS type: " + string(alertOptions.SmtpTlsType)))
+			return err
 		}
+
+		authPlain := sasl.NewPlainClient("", alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
+		if err = conn.Auth(authPlain); err != nil {
+
+			logger.Log(false, 2, ("Error encountered using AUTH PLAIN:" + err.Error()))
+			logger.Log(false, 0, "Attempting to switch to AUTH LOGIN...")
+
+			authLogin := sasl.NewLoginClient(alertOptions.SmtpAuthUser, alertOptions.SmtpAuthPass)
+
+			if err = conn.Auth(authLogin); err != nil {
+				logger.Log(false, 2, ("Error encountered using AUTH LOGIN: " + err.Error()))
+				return err
+			}
+		}
+
 	} else {
-		// Non-TLS connection (not recommended for Microsoft 365)
 		conn, err = smtp.Dial(smtpServer)
 		if err != nil {
 			return fmt.Errorf("error during connection: %v", err)
 		}
 	}
+
+	// Start building the message and headers
 
 	mailOpts := smtp.MailOptions{}
 	rcptOpts := smtp.RcptOptions{}
@@ -70,19 +85,36 @@ func SendSmtpAlert(alertOptions models.AlertOptions) error {
 	}
 	defer wc.Close()
 
-	body := "This is the email body.\n"
+	headers := make(map[string]string)
+	headers["From"] = alertOptions.SmtpFromField
+	headers["To"] = alertOptions.SmtpToField
+	headers["Subject"] = alertOptions.SmtpSubjectField
+	headers["Content-Type"] = "text/plain; charset=\"utf-8\""
+
+	body := ""
+
+	for hdr, val := range headers {
+		body += fmt.Sprintf("%s: %s\r\n", hdr, val)
+	}
+
+	body += "\r\n"
+
+	body += fmt.Sprintf("A potentially malicious network scan was detected coming from this IP address: %v\n", srcIp)
+
 	if _, err = wc.Write([]byte(body)); err != nil {
 		return fmt.Errorf("error writing email body: %v", err)
 	}
 
+	// After building the message, close the connection.
+
 	if err = conn.Quit(); err != nil {
 		if smtpErr, ok := err.(*smtp.SMTPError); ok && smtpErr.Code == 250 {
-			fmt.Println("Connection closed successfully with response 250.")
+			logger.Log(false, 0, ("Alert sent to SMTP recipient(s) successfully with response 250."))
 		} else {
 			return fmt.Errorf("error closing connection: %v", err)
 		}
 	} else {
-		fmt.Println("Connection closed successfully.")
+		logger.Log(false, 0, ("Alert sent to SMTP recipient(s) successfully."))
 	}
 
 	return nil
