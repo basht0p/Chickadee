@@ -10,7 +10,7 @@ import (
 	"github.com/gosnmp/gosnmp"
 )
 
-func SendSnmpTrap(alertOptions models.AlertOptions, srcIp string) error {
+func SendSnmpTrap(alertOptions *models.AlertOptions, srcIp string) error {
 	port, err := strconv.Atoi(alertOptions.SnmpPort)
 	if err != nil {
 		logger.Log(true, 1, 503, fmt.Sprintf("Invalid port number: %v", err))

@@ -34,6 +34,7 @@ type DetectionOptions struct {
 	ThresholdTime  uint
 	IgnoreTime     uint
 	AgentName      string
+	ExcludedIps    []string
 }
 
 type AlertOptions struct {

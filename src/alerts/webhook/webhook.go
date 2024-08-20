@@ -11,7 +11,7 @@ import (
 	"github.com/basht0p/chickadee/models"
 )
 
-func SendWebhookAlert(alertOptions models.AlertOptions, srcIp string) (err error) {
+func SendWebhookAlert(alertOptions *models.AlertOptions, srcIp string) (err error) {
 
 	data := models.WebhookData{
 		SourceIP: srcIp,

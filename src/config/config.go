@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/basht0p/chickadee/logger"
 	"github.com/basht0p/chickadee/models"
@@ -15,7 +16,7 @@ func handleConfigErr(section string, err error) {
 	}
 }
 
-func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
+func ReadConfig() (*models.DetectionOptions, *models.AlertOptions) {
 
 	var detectionOptions models.DetectionOptions
 	var alertOptions models.AlertOptions
@@ -23,6 +24,8 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 	iniContent, err := ini.Load("config.ini")
 	iniOptions := iniContent.Section("")
 	handleConfigErr("config file", err)
+
+	iniAgentName := iniOptions.Key("agent_name").String()
 
 	iniIface := iniOptions.Key("interface").String()
 	handleConfigErr("interface", err)
@@ -36,7 +39,8 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 	iniIgnoreTime, err := iniOptions.Key("ignore_time").Uint()
 	handleConfigErr("ignore_time", err)
 
-	iniAgentName := iniOptions.Key("agent_name").String()
+	excludedIpString := iniOptions.Key("excluded_ips").String()
+	iniExcludedIps := strings.Split(strings.ReplaceAll(excludedIpString, " ", ""), ",")
 
 	iniSmtpEnabled, err := iniOptions.Key("enable_smtp").Bool()
 	handleConfigErr("enable_smtp", err)
@@ -82,6 +86,7 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 		ThresholdTime:  iniThresholdTime,
 		IgnoreTime:     iniIgnoreTime,
 		AgentName:      iniAgentName,
+		ExcludedIps:    iniExcludedIps,
 	}
 
 	alertOptions = models.AlertOptions{
@@ -106,5 +111,5 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 		SnmpCommunity:    iniSnmpCommunity,
 	}
 
-	return detectionOptions, alertOptions
+	return &detectionOptions, &alertOptions
 }

@@ -17,7 +17,7 @@ import (
 var scans = make(map[string][]models.PortScan)
 var lastAlertTime = make(map[string]time.Time)
 
-func FindIface(ifaceQuery string) (iface string, ifaceDesc string) {
+func FindIface(detectionOptions *models.DetectionOptions) (iface string, ifaceDesc string) {
 
 	devices, err := pcap.FindAllDevs()
 	if err != nil {
@@ -26,24 +26,34 @@ func FindIface(ifaceQuery string) (iface string, ifaceDesc string) {
 	}
 
 	for _, device := range devices {
-		if device.Description == ifaceQuery {
+		if device.Description == detectionOptions.Iface {
 			if len(device.Addresses) > 0 {
 				iface = device.Name
 				ifaceDesc = device.Description
+
+				for _, address := range device.Addresses {
+					detectionOptions.ExcludedIps = append(detectionOptions.ExcludedIps, address.IP.String())
+				}
+
 				break
 			} else {
-				logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was found, but no usable addresses were configured. Exiting...", ifaceQuery))
+				logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was found, but no usable addresses were configured. Exiting...", detectionOptions.Iface))
 				log.Fatal(fmt.Errorf("device (%v) was found, but no usable addresses were configured. exiting", ifaceDesc))
 			}
 		}
 	}
 
 	if iface == "" {
-		logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was not found. Using first interface found with valid address...", ifaceQuery))
+		logger.Log(true, 2, 500, fmt.Sprintf("Device (%v) was not found. Using first interface found with valid address...", detectionOptions.Iface))
 		for _, device := range devices {
 			if len(device.Addresses) > 0 {
 				iface = device.Name
 				ifaceDesc = device.Description
+
+				for _, address := range device.Addresses {
+					detectionOptions.ExcludedIps = append(detectionOptions.ExcludedIps, address.IP.String())
+				}
+
 				break
 			}
 		}
@@ -54,7 +64,7 @@ func FindIface(ifaceQuery string) (iface string, ifaceDesc string) {
 	return
 }
 
-func OpenPcap(iface string, ifaceDesc string, detectionOptions models.DetectionOptions) *pcap.Handle {
+func OpenPcap(iface string, ifaceDesc string, detectionOptions *models.DetectionOptions) *pcap.Handle {
 
 	handle, err := pcap.OpenLive(iface, 1600, true, pcap.BlockForever)
 	if err != nil {
@@ -72,7 +82,7 @@ func OpenPcap(iface string, ifaceDesc string, detectionOptions models.DetectionO
 	return handle
 }
 
-func InitDetector(pktSrc *gopacket.PacketSource, detectionOptions models.DetectionOptions, alertOptions models.AlertOptions) {
+func InitDetector(pktSrc *gopacket.PacketSource, detectionOptions *models.DetectionOptions, alertOptions *models.AlertOptions) {
 	for packet := range pktSrc.Packets() {
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		if tcpLayer != nil {
@@ -83,9 +93,7 @@ func InitDetector(pktSrc *gopacket.PacketSource, detectionOptions models.Detecti
 				DetectPortScan(
 					srcIP,
 					uint16(tcp.DstPort),
-					uint16(detectionOptions.ThresholdCount),
-					uint16(detectionOptions.ThresholdTime),
-					uint16(detectionOptions.IgnoreTime),
+					detectionOptions,
 					alertOptions,
 				)
 			}
@@ -93,10 +101,19 @@ func InitDetector(pktSrc *gopacket.PacketSource, detectionOptions models.Detecti
 	}
 }
 
-func DetectPortScan(ip string, port uint16, tCount uint16, tTime uint16, iTime uint16, alertOptions models.AlertOptions) {
+func IsIpExcluded(srcIp string, detectionOptions *models.DetectionOptions) bool {
+	for _, ip := range detectionOptions.ExcludedIps {
+		if ip == srcIp {
+			return true
+		}
+	}
+	return false
+}
+
+func DetectPortScan(ip string, port uint16, detectionOptions *models.DetectionOptions, alertOptions *models.AlertOptions) {
 	now := time.Now()
 
-	if lastAlert, alerted := lastAlertTime[ip]; alerted && now.Sub(lastAlert) < time.Duration(iTime)*time.Second {
+	if lastAlert, alerted := lastAlertTime[ip]; alerted && now.Sub(lastAlert) < time.Duration(detectionOptions.IgnoreTime)*time.Second {
 		return
 	}
 
@@ -106,7 +123,7 @@ func DetectPortScan(ip string, port uint16, tCount uint16, tTime uint16, iTime u
 
 	var newScans []models.PortScan
 	for _, scan := range scans[ip] {
-		if now.Sub(scan.Timestamp) <= time.Duration(tTime)*time.Second {
+		if now.Sub(scan.Timestamp) <= time.Duration(detectionOptions.ThresholdTime)*time.Second {
 			newScans = append(newScans, scan)
 		}
 	}
@@ -114,9 +131,11 @@ func DetectPortScan(ip string, port uint16, tCount uint16, tTime uint16, iTime u
 
 	scans[ip] = append(scans[ip], models.PortScan{Port: port, Timestamp: now})
 
-	if len(scans[ip]) > int(tCount) {
-		logger.Log(true, 1, 515, ("Port scan detected from: " + ip))
-		alerts.TriggerAlert(alertOptions, ("Port scan detected from: " + ip), ip)
-		lastAlertTime[ip] = now
+	if len(scans[ip]) > int(detectionOptions.ThresholdCount) {
+		if !IsIpExcluded(ip, detectionOptions) {
+			logger.Log(true, 1, 515, ("Port scan detected from: " + ip))
+			alerts.TriggerAlert(alertOptions, ("Port scan detected from: " + ip), ip)
+			lastAlertTime[ip] = now
+		}
 	}
 }

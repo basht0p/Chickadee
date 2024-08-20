@@ -50,7 +50,7 @@ func (p *program) run() {
 	detectionOptions, alertOptions := config.ReadConfig()
 
 	// Attempt to find the interface defined in the config
-	iface, ifaceDesc := detector.FindIface(detectionOptions.Iface)
+	iface, ifaceDesc := detector.FindIface(detectionOptions)
 
 	// Open a pcap channel with that interface
 	handle := detector.OpenPcap(iface, ifaceDesc, detectionOptions)

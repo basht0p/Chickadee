@@ -11,7 +11,7 @@ import (
 )
 
 // SendSmtpAlert sends an email using the go-smtp library
-func SendSmtpAlert(alertOptions models.AlertOptions, alertMessage string, srcIp string) error {
+func SendSmtpAlert(alertOptions *models.AlertOptions, alertMessage string, srcIp string) error {
 	if !alertOptions.SmtpEnabled {
 		logger.Log(true, 1, 503, "SMTP is not enabled, but the function was called. How'd you do that?")
 		return fmt.Errorf("SMTP is not enabled in the config")
