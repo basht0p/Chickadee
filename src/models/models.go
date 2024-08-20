@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 )
 
@@ -16,6 +17,16 @@ const (
 	SSLTLS
 	STARTTLS
 )
+
+type Webhook struct {
+	Type      string      `json:"type"`
+	Timestamp time.Time   `json:"timestamp"`
+	Data      WebhookData `json:"data"`
+}
+
+type WebhookData struct {
+	SourceIP string `json:"src_ip"`
+}
 
 type DetectionOptions struct {
 	Iface          string
@@ -38,4 +49,15 @@ type AlertOptions struct {
 	SmtpToField      string
 	SmtpFromField    string
 	SmtpSubjectField string
+	WebhookEnabled   bool
+	WebhookUrl       string
+	SnmpEnabled      bool
+	SnmpOid          string
+	SnmpServer       string
+	SnmpPort         string
+	SnmpCommunity    string
+}
+
+type LoggerWrapper struct {
+	logger *log.Logger
 }

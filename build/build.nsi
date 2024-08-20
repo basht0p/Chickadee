@@ -1,6 +1,6 @@
 Name "Chickadee NSD Installer"
 
-Outfile "install_chickadee.exe"
+Outfile "chickadee_installer_win-x64.exe"
  
 InstallDir $PROGRAMFILES64\Chickadee
  

@@ -63,6 +63,19 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 	iniSmtpFromField := iniOptions.Key("from").String()
 	iniSmtpSubjectField := iniOptions.Key("subject").String()
 
+	iniWebhookEnabled, err := iniOptions.Key("enable_webhook").Bool()
+	handleConfigErr("webhook enabled", err)
+
+	iniWebhookUrl := iniOptions.Key("webhook_url").String()
+
+	iniSnmpEnabled, err := iniOptions.Key("enable_snmptrap").Bool()
+	handleConfigErr("snmp enabled", err)
+
+	iniSnmpOid := iniOptions.Key("snmp_oid").String()
+	iniSnmpServer := iniOptions.Key("snmp_server").String()
+	iniSnmpPort := iniOptions.Key("snmp_port").String()
+	iniSnmpCommunity := iniOptions.Key("snmp_community").String()
+
 	detectionOptions = models.DetectionOptions{
 		Iface:          iniIface,
 		ThresholdCount: iniThresholdCount,
@@ -84,6 +97,13 @@ func ReadConfig() (models.DetectionOptions, models.AlertOptions) {
 		SmtpToField:      iniSmtpToField,
 		SmtpFromField:    iniSmtpFromField,
 		SmtpSubjectField: (iniAgentName + ": " + iniSmtpSubjectField),
+		WebhookEnabled:   iniWebhookEnabled,
+		WebhookUrl:       iniWebhookUrl,
+		SnmpEnabled:      iniSnmpEnabled,
+		SnmpOid:          iniSnmpOid,
+		SnmpServer:       iniSnmpServer,
+		SnmpPort:         iniSnmpPort,
+		SnmpCommunity:    iniSnmpCommunity,
 	}
 
 	return detectionOptions, alertOptions
