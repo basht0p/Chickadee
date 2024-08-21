@@ -122,14 +122,20 @@ func DetectPortScan(ip string, port uint16, detectionOptions *models.DetectionOp
 	}
 
 	var newScans []models.PortScan
+	portExists := false
 	for _, scan := range scans[ip] {
 		if now.Sub(scan.Timestamp) <= time.Duration(detectionOptions.ThresholdTime)*time.Second {
 			newScans = append(newScans, scan)
+			if scan.Port == port {
+				portExists = true
+			}
 		}
 	}
 	scans[ip] = newScans
 
-	scans[ip] = append(scans[ip], models.PortScan{Port: port, Timestamp: now})
+	if !portExists {
+		scans[ip] = append(scans[ip], models.PortScan{Port: port, Timestamp: now})
+	}
 
 	if len(scans[ip]) > int(detectionOptions.ThresholdCount) {
 		if !IsIpExcluded(ip, detectionOptions) {
